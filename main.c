@@ -3,7 +3,6 @@
 
 int main()
 {
-	recuperaConteudoFich();
 	mostraMenu();
 	
 	return(0);

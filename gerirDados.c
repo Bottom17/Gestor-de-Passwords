@@ -1,82 +1,154 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "gestorPswd.h"
 
-void verificaConta(char *user, char *pswd)
+void procuraConta(char *nome_site)
 {
-    const char *delimitar_dados = ";";
-    char *nome_utilizador, *palavra_passe;
-    char *separar_dados, *passe_encriptada;
-    char *conteudo_ficheiro;
-
-    nome_utilizador = user;
-    palavra_passe = pswd;
-    passe_encriptada = encriptaPasse(nome_utilizador, palavra_passe);
-    conteudo_ficheiro = recuperaConteudoFich(); 
-
-    /* Recuperar primeira informação do ficheiro delimitado por um ';' */
-    separar_dados = strtok(conteudo_ficheiro, delimitar_dados);
-    /* Recuperar o resto das informações */
-    while(separar_dados != NULL){
-        /* Se o nome de utilizador inserido for encontrado */
-        if(strcmp(separar_dados, nome_utilizador) == 0){
-            separar_dados = strtok(NULL, delimitar_dados);
-            /* Verificar palavra-passe inserida */
-            if (strcmp(separar_dados, passe_encriptada) == 0){
-                printf("Conexão bem sucedida %s.\n", nome_utilizador);
-                exit(1); 
-            }
-        }
-        separar_dados = strtok(NULL, delimitar_dados);
-    }
-    /* Se a conta inserida não existir */
-    puts("O utilizador ou palavra-passe não existem.");
-}
-
-void criaConta(char *user, char *pswd)
-{
-    /* Verificar que o nome de utilizador não existe */
-    const char *delimitar_dados = ";";
-    char *nome_utilizador, *palavra_passe;
     char *conteudo_ficheiro;
     char *separar_dados;
+    char *passe_desencriptada;
+    char *nome_utilizador;
     
-    nome_utilizador = user;
-    palavra_passe = pswd;
-    conteudo_ficheiro = recuperaConteudoFich(); 
-    /* Recuperar primeira informação do ficheiro delimitado por um ';' */
-    separar_dados = strtok(conteudo_ficheiro, delimitar_dados);
-    
-    /* Recuperar o resto das informações */
+    conteudo_ficheiro = recuperaConteudoFich();
+    separar_dados = strtok(conteudo_ficheiro, ":");
+    nome_utilizador = (char*)malloc(40 * sizeof(char));
+
+    // Recuperar o resto dos sites
     while(separar_dados != NULL){
-        /* Se o nome de utilizador inserido for encontrado */
-        if(strcmp(separar_dados, nome_utilizador) == 0){
-            puts("Esse utilizador já existe.");
+        // Se o nome do site inserido for encontrado
+        if(strcmp(separar_dados, nome_site) == 0){
+            separar_dados = strtok(NULL, ":");
+            printf("Nome de utilizador: %s\n", separar_dados);
+            strcpy(nome_utilizador, separar_dados);
+            separar_dados = strtok(NULL, "\n");
+            printf("Palavra-passe: %s\n", desencriptaPasse(nome_utilizador,
+                                                           separar_dados));
+            free(conteudo_ficheiro);
+            free(nome_utilizador);
             exit(1);
         }
-        separar_dados = strtok(NULL, delimitar_dados);
+        separar_dados = strtok(NULL, "\n");
+        separar_dados = strtok(NULL, ":");
     }
-    escreveConteudoFich(nome_utilizador, palavra_passe);  
-    printf("Seja muito bem-vindo %s!\n", nome_utilizador);
+
+    // Se o site inserido não existir
+    printf("Não foi registada nenhuma conta para o site '%s'\n", nome_site);
+    free(conteudo_ficheiro);
+    free(nome_utilizador);
 }
 
-char * encriptaPasse(char *user, char *pswd)
+void adicionaConta(char *nome_site, char *nome_utilizador, char *palavra_passe)
 {
-    char *nome_utilizador, *passe_encriptada;
-    int salto;
-    
-    nome_utilizador = user;
-    passe_encriptada = pswd;
-    /* Cifra de César baseado no tamanho do nome de utilizador inserido*/
-    salto = strlen(nome_utilizador);
-    
-    for(int x=0; x<strlen(passe_encriptada); x++){
-        *(passe_encriptada + x) += salto;
-        if(*(passe_encriptada + x) >= 127){
-            *(passe_encriptada + x) -= 127;
-            *(passe_encriptada + x) += 33;
+    char *conteudo_ficheiro;
+    char *passe_encriptada;
+    char *separar_dados;
+
+    conteudo_ficheiro = recuperaConteudoFich(); 
+    passe_encriptada = encriptaPasse(nome_utilizador, palavra_passe);
+
+    // Recuperar primeiro site delimitado por ':'
+    separar_dados = strtok(conteudo_ficheiro, ":");
+
+    // Recuperar o resto dos sites 
+    while(separar_dados != NULL){
+        // Se o nome do site inserido for encontrado
+        if(strcmp(separar_dados, nome_site) == 0){
+            puts("Esse site já foi inserido.");
+            free(conteudo_ficheiro);
+            exit(1);
         }
+        separar_dados = strtok(NULL, "\n");
+        separar_dados = strtok(NULL, ":");
     }
+
+    // upperNomeSite(nome_site) - Guardar o nome do site em maiusculas 
+    escreveConteudoFich(nome_site, nome_utilizador, passe_encriptada);
+    printf("Credenciais para o site '%s' foram inseridas com sucesso!\n",
+           nome_site);
+    free(conteudo_ficheiro);
+    free(passe_encriptada);
+}
+
+char* upperNomeSite(char *nome_site)
+{
+    char *upper_site;
+    int i = 0;
+
+    upper_site = (char*)calloc(strlen(nome_site), sizeof(char));
+
+    // Transformar nome do site em maiusculas 
+    while(i < strlen(nome_site)){
+        *(upper_site + i) = toupper(*(nome_site + i));
+        i++;
+    }
+
+    return upper_site;
+}
+
+char* encriptaPasse(char *nome_utilizador, char *passe_desencriptada)
+{
+    int salto;
+    int caractere_encriptado;
+    char *passe_encriptada;
+ 
+    passe_encriptada = (char*)calloc(strlen(passe_desencriptada), sizeof(char));
+
+    // Cifra de César baseada no tamanho do nome de utilizador inserido
+    salto = strlen(nome_utilizador);
+
+    for(int x=0; x<strlen(passe_desencriptada); x++){
+        caractere_encriptado = *(passe_desencriptada + x) + salto;
+        if(caractere_encriptado >= 127){
+            caractere_encriptado -= 127;
+            caractere_encriptado += 33;
+            // Se caractere for ':'
+            if(caractere_encriptado == 58){
+                caractere_encriptado += 1;
+            }
+        }
+        // Se caractere for ':'
+        if(caractere_encriptado == 58){
+            caractere_encriptado += 1;
+        }
+
+        // Acrescenta o caractere encriptado ao fim do apontador 
+        strcat(passe_encriptada, (char*)&caractere_encriptado);
+    }
+
     return passe_encriptada;
+}
+
+char* desencriptaPasse(char *nome_utilizador, char *passe_encriptada)
+{
+    int salto;
+    int caractere_desencriptado;
+    char *passe_desencriptada;
+ 
+    passe_desencriptada = (char*)calloc(strlen(passe_encriptada), sizeof(char));
+
+    // Cifra de César baseada no tamanho do nome de utilizador inserido
+    salto = strlen(nome_utilizador);
+
+    for(int x=0; x<strlen(passe_encriptada); x++){
+        caractere_desencriptado = *(passe_encriptada + x) - salto;
+        if(caractere_desencriptado <= 33){
+            caractere_desencriptado += 127;
+            caractere_desencriptado -= 33;
+            // Se caractere for ':'
+            if(caractere_desencriptado == 58){
+                caractere_desencriptado -= 1;
+            }
+        }
+        // Se caractere for ':'
+        if(caractere_desencriptado == 58){
+            caractere_desencriptado -= 1;
+        }
+
+        // Acrescenta o caractere encriptado ao fim do apontador 
+        strcat(passe_desencriptada, (char*)&caractere_desencriptado);
+    }
+
+    return passe_desencriptada;
 }
