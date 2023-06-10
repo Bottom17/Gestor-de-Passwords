@@ -3,10 +3,11 @@
 #include <stdlib.h>
 #include "gestorPswd.h"
 
-const char *nome_ficheiro = "passwords.txt";
+const char *ficheiro_dados = "passwords.txt";
+const char *ficheiro_chave = "chave.txt";
 FILE *ficheiro;
 
-long int tamanhoFicheiro(const char *nome_fich)
+long int tamanhoFicheiro(const char *nome_ficheiro)
 {   
     long int tamanho_bytes;
     ficheiro = fopen(nome_ficheiro, "r"); 
@@ -24,46 +25,57 @@ long int tamanhoFicheiro(const char *nome_fich)
     return tamanho_bytes;
 }
 
-char* recuperaConteudoFich()
+char* leFicheiro(const char *nome_ficheiro, const char *modo)
 {
-    long int tamanho_bytes = tamanhoFicheiro(nome_ficheiro);
+    long int tamanho_bytes;
     char *conteudo_ficheiro;
 
-    ficheiro = fopen(nome_ficheiro, "r+"); 
-
-    // Abrir ficheiro
-    if(ficheiro == NULL){
-        printf("Couldn't open file %s\n", nome_ficheiro);
-        exit(1);
-    }
-
+    tamanho_bytes = tamanhoFicheiro(nome_ficheiro);
     conteudo_ficheiro = (char*)calloc(tamanho_bytes, sizeof(char));
-    // Abrir ficheiro
     if(conteudo_ficheiro == NULL){
         printf("Couldn't allocate memory.\n");
         exit(1);
     }
 
-    // Ler ficheiro
-    fread(conteudo_ficheiro, sizeof(char), tamanho_bytes, ficheiro);
-
-    // Fechar ficheiro
-    fclose(ficheiro);
-
-    return conteudo_ficheiro;
-} 
-
-void escreveConteudoFich(char *nome_site, char *nome_utilizador, char *palavra_passe)
-{
-    ficheiro = fopen(nome_ficheiro, "a"); 
-    // Abrir ficheiro
+    ficheiro = fopen(nome_ficheiro, modo); 
     if(ficheiro == NULL){
         printf("Couldn't open file %s\n", nome_ficheiro);
         exit(1);
     }
 
-    // Escrever no ficheiro
-    fprintf(ficheiro, "%s:%s:%s\n", nome_site, nome_utilizador, palavra_passe);
-    // Fechar ficheiro
+    fread(conteudo_ficheiro, sizeof(char), tamanho_bytes, ficheiro);
     fclose(ficheiro);
+
+    return conteudo_ficheiro;
+} 
+
+void escreveFicheiroDados(char *site, char *utilizador, char *passe_encriptada)
+{
+    ficheiro = fopen(ficheiro_dados, "a"); 
+    if(ficheiro == NULL){
+        printf("Couldn't open file %s\n", ficheiro_dados);
+        exit(1);
+    }
+
+    fprintf(ficheiro, "%s %s %s\n", site, utilizador, passe_encriptada);
+    fclose(ficheiro);
+
+    free(passe_encriptada);
+    passe_encriptada = NULL;
 }
+
+void escreveFicheiroChave(char *chave_criptografica_encriptada)
+{
+    ficheiro = fopen(ficheiro_chave, "w");
+    if(ficheiro == NULL){
+        puts("Erro relacionado com um ficheiro");
+        exit(1);
+    }
+
+    fwrite(chave_criptografica_encriptada, sizeof(char), tamanho_chave, ficheiro);
+    fclose(ficheiro);
+
+    free(chave_criptografica_encriptada);
+    chave_criptografica_encriptada = NULL;
+}
+
