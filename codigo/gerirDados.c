@@ -4,11 +4,12 @@
 #include <ctype.h>
 #include "gestorPswd.h"
 
-void procuraDados(char *nome_site, char *chave_criptografica)
+void procuraDados(char *nome_site)
 {
     char *conteudo_ficheiro;
     char *separar_dados;
     char *passe_desencriptada;
+    char *utilizador_desencriptado;
     
     conteudo_ficheiro = leFicheiro(ficheiro_dados, "r");
     separar_dados = strtok(conteudo_ficheiro, " ");
@@ -17,19 +18,20 @@ void procuraDados(char *nome_site, char *chave_criptografica)
     while(separar_dados != NULL){
         // Se o nome do site inserido for encontrado
         if(strcmp(separar_dados, nome_site) == 0){
-            printf("chave criptografica1: %s\n", chave_criptografica);
             separar_dados = strtok(NULL, " ");
-            printf("Nome de utilizador: %s\n", separar_dados);
+            utilizador_desencriptado = desencriptaUtilizador(separar_dados);
+            printf("Nome de utilizador: %s\n", utilizador_desencriptado);
             separar_dados = strtok(NULL, "\n");
-            passe_desencriptada = desencriptaDados(chave_criptografica,
-                                                   separar_dados);
+            passe_desencriptada = desencriptaPasse(separar_dados);
             printf("Palavra-passe: %s\n", passe_desencriptada);
 
             free(conteudo_ficheiro);
             free(passe_desencriptada);
+            free(utilizador_desencriptado);
             free(nome_site);
             conteudo_ficheiro = NULL;
             passe_desencriptada = NULL;
+            utilizador_desencriptado = NULL;
             nome_site = NULL;
 
             printf("Pressione Enter para continuar: ");
@@ -57,10 +59,9 @@ void procuraDados(char *nome_site, char *chave_criptografica)
     mostraMenu();
 }
 
-void adicionaDados(char *chave_criptografica, char *nome_site, char *nome_utilizador, char *palavra_passe)
+void adicionaDados(char *nome_site, char *utilizador_encriptado, char *passe_encriptada)
 {
     char *conteudo_ficheiro;
-    char *passe_encriptada;
     char *separar_dados;
 
     conteudo_ficheiro = leFicheiro(ficheiro_dados, "r+"); 
@@ -79,16 +80,19 @@ void adicionaDados(char *chave_criptografica, char *nome_site, char *nome_utiliz
 
             free(conteudo_ficheiro);
             free(nome_site);
+            free(utilizador_encriptado);
+            free(passe_encriptada);
             conteudo_ficheiro = NULL;
             nome_site = NULL;
+            utilizador_encriptado = NULL;
+            passe_encriptada = NULL;
 
             mostraMenu();
         }
         separar_dados = strtok(NULL, "\n");
         separar_dados = strtok(NULL, " ");
     }
-    escreveFicheiroDados(nome_site, nome_utilizador, 
-                         encriptaDados(chave_criptografica, palavra_passe));
+    escreveFicheiroDados(nome_site, utilizador_encriptado, passe_encriptada);
     printf("Credenciais para o site '%s' foram inseridas com sucesso!\n",
            nome_site);
     printf("Pressione Enter para continuar: ");
@@ -96,70 +100,186 @@ void adicionaDados(char *chave_criptografica, char *nome_site, char *nome_utiliz
         ;
 
     free(conteudo_ficheiro);
-    free(nome_site);
     conteudo_ficheiro = NULL;
+    free(nome_site);
     nome_site = NULL;
+    printf("nome site: %s\n", nome_site);
+    free(utilizador_encriptado);
+    utilizador_encriptado = NULL;
+    printf("nome utilizador: %s\n", utilizador_encriptado);
+    free(passe_encriptada);
+    passe_encriptada = NULL;
+    printf("passe: %s\n", passe_encriptada);
 
     mostraMenu();
 }
 
+void listaSites()
+{
+    int linha = 1, numero_site;
+    char *conteudo_ficheiro;
+    char *separar_dados1, *separar_dados2;
+    char *nome_site;
+
+    conteudo_ficheiro = leFicheiro(ficheiro_dados, "r");
+    separar_dados1 = strtok(conteudo_ficheiro, " ");
+    nome_site = (char*)calloc(tamanho_dados + 1, sizeof(char));
+
+    // Recuperar o resto dos sites
+    while(separar_dados1 != NULL){
+        separar_dados1 = strtok(NULL, "\n");
+        separar_dados1 = strtok(NULL, " ");
+        if(separar_dados1 == NULL)
+            break;
+        printf("|%d| - %s\n", linha, separar_dados1);
+        linha++;
+    }
+
+    free(conteudo_ficheiro);
+    linha = 0;
+
+    conteudo_ficheiro = leFicheiro(ficheiro_dados, "r");
+    separar_dados2 = strtok(conteudo_ficheiro, " ");
+
+    printf("Insira o numero do site para o qual deseja visualizar as credenciais: ");
+    scanf("%d", &numero_site);
+    while (linha != numero_site) {
+        separar_dados2 = strtok(NULL, "\n");
+        separar_dados2 = strtok(NULL, " ");
+        if(separar_dados2 == NULL){
+            puts("Esse numero nao esta na lista!");
+            break;
+        }
+        linha++;
+    }
+
+    free(conteudo_ficheiro);
+    strcpy(nome_site, separar_dados2);
+    // Eliminar 'Enter' para evitar problemas com futuros inputs
+    while(getchar() != '\n')
+        ;
+    procuraDados(nome_site);
+}
+
 char* upperDados(char *dados)
 {
-    char *upper_dados;
     int i = 0;
-
-    upper_dados = (char*)calloc(strlen(dados), sizeof(char));
 
     // Transformar nome do site em maiusculas 
     while(i < strlen(dados)){
-        *(upper_dados + i) = toupper(*(dados + i));
+        // *(upper_dados + i) = toupper(*(dados + i));
+        *(dados + i) = toupper(*(dados + i));
         i++;
     }
 
-    return upper_dados;
+    return dados;
 }
 
-char* encriptaDados(char* chave_criptografica, char *dados_a_encriptar)
+char* encriptaPasse(char *passe_a_encriptar)
 {
-    int caractere_encriptado;
-    char *dados_encriptados;
+    int caractere_encriptado, x;
+    char *passe_encriptada;
 
-    dados_encriptados = (char*)calloc(strlen(dados_a_encriptar), 
+    passe_encriptada = (char*)calloc(strlen(passe_a_encriptar) + 1, 
                                       sizeof(char));
 
-    for(int x=0; x<strlen(dados_a_encriptar); x++){
+    for(x=0; x<strlen(passe_a_encriptar); x++){
         caractere_encriptado = 0;
-        caractere_encriptado = *(dados_a_encriptar + x) + *(chave_criptografica + x);
+        caractere_encriptado = *(passe_a_encriptar + x) + *(chave_criptografica + x);
         while(caractere_encriptado >= 127){
             caractere_encriptado -= 127;
             caractere_encriptado += 33;
         }
         // Acrescenta o caractere encriptado 
-        strncat(dados_encriptados, (char*)&caractere_encriptado, strlen(dados_a_encriptar));
+        strncat(passe_encriptada, (char*)&caractere_encriptado, strlen(passe_a_encriptar));
     }
 
-    return dados_encriptados;
+    *(passe_encriptada + x) = '\0';
+
+    free(passe_a_encriptar);
+    passe_a_encriptar = NULL;
+
+    return passe_encriptada;
 }
 
-char* desencriptaDados(char *chave_criptografica, char *dados_a_desencriptar)
+char* desencriptaPasse(char *passe_a_desencriptar)
 {
-    int caractere_desencriptado;
-    char *dados_desencriptados;
+    int caractere_desencriptado, x;
+    char *passe_desencriptada;
  
-    dados_desencriptados = (char*)calloc(strlen(dados_a_desencriptar), sizeof(char));
+    passe_desencriptada = (char*)calloc(strlen(passe_a_desencriptar) + 1, 
+                                        sizeof(char));
 
-    for(int x=0; x<strlen(dados_a_desencriptar); x++){
-        caractere_desencriptado = *(dados_a_desencriptar + x) 
+    for(x=0; x<strlen(passe_a_desencriptar); x++){
+        caractere_desencriptado = 0;
+        caractere_desencriptado = *(passe_a_desencriptar + x) 
                                     - *(chave_criptografica + x);
         while(caractere_desencriptado <= 33){
             caractere_desencriptado += 127;
             caractere_desencriptado -= 33;
         }
         // Acrescenta o caractere encriptado ao fim da array 
-        strncat(dados_desencriptados, (char*)&caractere_desencriptado, 
-                strlen(dados_a_desencriptar));
+        strncat(passe_desencriptada, (char*)&caractere_desencriptado, 
+                strlen(passe_a_desencriptar));
     }
 
+    *(passe_desencriptada + x) = '\0';
 
-    return dados_desencriptados;
+    return passe_desencriptada;
+}
+
+char* encriptaUtilizador(char *utilizador_a_encriptar)
+{
+    int caractere_encriptado, x;
+    char *utilizador_encriptado;
+
+    utilizador_encriptado = (char*)calloc(strlen(utilizador_a_encriptar) + 1, 
+                                          sizeof(char));
+
+    for(x=0; x<strlen(utilizador_a_encriptar); x++){
+        caractere_encriptado = 0;
+        caractere_encriptado = *(utilizador_a_encriptar + x) + 
+                                 (8 * strlen(utilizador_a_encriptar));
+        while(caractere_encriptado >= 127){
+            caractere_encriptado -= 127;
+            caractere_encriptado += 33;
+        }
+        // Acrescenta o caractere encriptado 
+        strncat(utilizador_encriptado, (char*)&caractere_encriptado, 
+                strlen(utilizador_a_encriptar));
+    }
+
+    *(utilizador_encriptado + x) = '\0';
+
+    free(utilizador_a_encriptar);
+    utilizador_a_encriptar = NULL;
+
+    return utilizador_encriptado;
+}
+
+char *desencriptaUtilizador(char *utilizador_a_desencriptar)
+{
+    int caractere_desencriptado, x;
+    char *utilizador_desencriptado;
+ 
+    utilizador_desencriptado = (char*)calloc(strlen(utilizador_a_desencriptar) + 1, 
+                                             sizeof(char));
+
+    for(x=0; x<strlen(utilizador_a_desencriptar); x++){
+        caractere_desencriptado = 0;
+        caractere_desencriptado = *(utilizador_a_desencriptar + x) - 
+                                    (8 * strlen(utilizador_a_desencriptar));
+        while (caractere_desencriptado <= 33) {
+            caractere_desencriptado += 127;
+            caractere_desencriptado -= 33;
+        }
+        // Acrescenta o caractere encriptado ao fim da array 
+        strncat(utilizador_desencriptado, (char*)&caractere_desencriptado, 
+                strlen(utilizador_a_desencriptar));
+    }
+
+    *(utilizador_desencriptado + x) = '\0';
+
+
+    return utilizador_desencriptado;
 }

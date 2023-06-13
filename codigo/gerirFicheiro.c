@@ -49,7 +49,7 @@ char* leFicheiro(const char *nome_ficheiro, const char *modo)
     return conteudo_ficheiro;
 } 
 
-void escreveFicheiroDados(char *site, char *utilizador, char *passe_encriptada)
+void escreveFicheiroDados(char *site, char *utilizador_encriptado, char *passe_encriptada)
 {
     ficheiro = fopen(ficheiro_dados, "a"); 
     if(ficheiro == NULL){
@@ -57,11 +57,8 @@ void escreveFicheiroDados(char *site, char *utilizador, char *passe_encriptada)
         exit(1);
     }
 
-    fprintf(ficheiro, "%s %s %s\n", site, utilizador, passe_encriptada);
+    fprintf(ficheiro, "%s %s %s\n", site, utilizador_encriptado, passe_encriptada);
     fclose(ficheiro);
-
-    free(passe_encriptada);
-    passe_encriptada = NULL;
 }
 
 void escreveFicheiroChave(char *chave_criptografica_encriptada)

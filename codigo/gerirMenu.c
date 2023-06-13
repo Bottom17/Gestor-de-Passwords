@@ -5,11 +5,15 @@
 #include "gestorPswd.h"
 
 int numero_execucao = 0;
+const int tamanho_dados = 30;
 char *chave_criptografica;
 
 void mostraMenu()
 {
     int escolha;
+    char *site;
+
+    site = (char*)calloc(tamanho_dados + 1, sizeof(char));
     
     if(numero_execucao == 0){
         chave_criptografica = mostraIniciar();
@@ -22,37 +26,43 @@ void mostraMenu()
     puts("|-------------------------------------------------------|");
     puts("|             |1| Conexão a conta existente             |");
     puts("|             |2| Criar nova conta                      |");
-    puts("|             |3| Sair                                  |");
+    puts("|             |3| Listar sites inseridos                |");
+    puts("|             |4| Sair                                  |");
     puts("|-------------------------------------------------------|");
-    printf("O que deseja fazer (1 - 3)? ");
+    printf("O que deseja fazer (1 - 4) ");
     scanf("%d", &escolha);
     // Eliminar 'Enter' para evitar problemas com futuros inputs
     while(getchar() != '\n')
         ;
 
     if(escolha == 1){
-        mostraProcurar(chave_criptografica);
+        system("clear");
+        mostraProcurar(site);
     }
     else if(escolha == 2){
-        mostraAdicionar(chave_criptografica);
+        system("clear");
+        mostraAdicionar(site);
+    }
+    else if (escolha == 3) {
+        system("clear");
+        mostraListarSites();
     }
     else{
-        mostraSair(chave_criptografica);
+        system("clear");
+        mostraSair();
     }
 }
 
 char* mostraIniciar()
 {
-    char *chave_criptografica_encriptada;
-    char *chave_mestra;
-
-    chave_mestra = (char*)calloc(tamanho_chave, sizeof(char));
+    char *cripto_encriptada;
+    char *mestra;
 
     // Se o ficheiro ainda nao tiver credenciais
     if (tamanhoFicheiro(ficheiro_dados) == 34) {
         chave_criptografica = geraChaveCriptografica();
+        mestra = (char*)calloc(tamanho_chave + 1, sizeof(char));
 
-        system("clear");
         puts("|-------------------------------------------------------|");
         puts("|               Gestor de palavras-passe                |");
         puts("|-------------------------------------------------------|");
@@ -70,42 +80,40 @@ char* mostraIniciar()
         puts("|                 DIGITOS: NO MINIMO 1                  |");
         puts("|-------------------------------------------------------|");
         printf("Insira a nova chave mestra: ");
-        scanf("%s", chave_mestra);
+        scanf("%s", mestra);
         // Eliminar 'Enter' para evitar problemas com futuros inputs
         while(getchar() != '\n')
             ;
 
-        verificaChaveMestra(chave_mestra);
-        chave_criptografica_encriptada = encriptaDados(chave_criptografica, 
-                                                       chave_mestra);
-        escreveFicheiroChave(chave_criptografica_encriptada);
+        verificaChaveMestra(mestra);
+        cripto_encriptada = encriptaPasse(mestra);
+        escreveFicheiroChave(cripto_encriptada);
 
         free(chave_criptografica);
         chave_criptografica = NULL;
     }
         
+    mestra = (char*)calloc(tamanho_chave + 1, sizeof(char));
+
     system("clear");
     puts("|-------------------------------------------------------|");
     puts("|               Gestor de palavras-passe                |");
     puts("|-------------------------------------------------------|");
     printf("Insira a sua chave mestra: ");
-    scanf("%s", chave_mestra);
+    scanf("%s", mestra);
     // Eliminar 'Enter' para evitar problemas com futuros inputs
     while(getchar() != '\n')
         ;
-    verificaChaveMestra(chave_mestra);
-    chave_criptografica = desencriptaChaveCriptografica(chave_mestra);
+    verificaChaveMestra(mestra);
+    chave_criptografica = desencriptaChaveCriptografica(mestra);
 
    return chave_criptografica;
 }
 
-void mostraProcurar(char *chave_criptografica)
+void mostraProcurar(char *nome_site)
 {
-    char nome_site[40];
-
-    system("clear");
     puts("---------------------------------------------------------");
-    puts("               |Conexão a conta existente|               ");
+    puts("         |Procurar credenciais de site existente|        ");
     puts("---------------------------------------------------------");
     printf("Nome do site: ");
     scanf("%s", nome_site);
@@ -113,55 +121,46 @@ void mostraProcurar(char *chave_criptografica)
     // em maiusculas
     while(getchar() != '\n')
         ;
-    procuraDados(upperDados(nome_site), chave_criptografica);
+    procuraDados(upperDados(nome_site));
 }
 
-void mostraAdicionar(char *chave_criptografica)
+void mostraAdicionar(char *nome_site)
 {
-    char nome_site[40];
-    char nome_utilizador[40];
-    char palavra_passe[40];
+    char *utilizador;
+    char *passe;
 
-    system("clear");
+    utilizador = (char*)calloc(tamanho_dados, sizeof(char));
+    passe = (char*)calloc(tamanho_dados, sizeof(char));
+
     puts("---------------------------------------------------------");
-    puts("                   |Criar nova conta|                    ");
+    puts("                 |Adicionar novo site|                   ");
     puts("---------------------------------------------------------");
-    printf("Novo site: ");
+    printf("Nome do novo site: ");
     scanf("%s", nome_site);
     printf("Nome de utilizador: ");
-    scanf("%s", nome_utilizador);
+    scanf("%s", utilizador);
     printf("Palavra-passe: ");
-    scanf("%s", palavra_passe);
+    scanf("%s", passe);
     while(getchar() != '\n')
         ;
     // upperNomeSite(nome_site) - input do utilizador transformado 
     // em maiusculas
-    adicionaDados(chave_criptografica, upperDados(nome_site), nome_utilizador, 
-                  palavra_passe);
-
-    printf("%s\n", chave_criptografica);
-    while(getchar() != '\n')
-        ;
-
-    mostraMenu();
+    adicionaDados(upperDados(nome_site), encriptaUtilizador(utilizador), 
+                  encriptaPasse(passe));
 }
 
-void mostraSair(char *chave_criptografica)
+void mostraListarSites()
 {
-    char escolha_sair;
-
-    system("clear");
     puts("---------------------------------------------------------");
-    puts("                         |Sair|                          ");
+    puts("                |Listar sites inseridos|                 ");
     puts("---------------------------------------------------------");
-    printf("Pretende sair? Se sim insira 'S': ");
-    scanf("%c", &escolha_sair);
+    listaSites();
+}
 
-    escolha_sair = toupper(escolha_sair);  
-    if(escolha_sair == 'S'){
-        free(chave_criptografica);
-        chave_criptografica = NULL;
+void mostraSair()
+{
+    free(chave_criptografica);
+    chave_criptografica = NULL;
 
-        exit(1);
-    }
+    exit(0);
 }

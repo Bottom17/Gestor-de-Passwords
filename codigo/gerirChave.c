@@ -9,11 +9,11 @@ const int tamanho_chave = 15;
 
 char* geraChaveCriptografica()
 {
-    char *chave_criptografica; 
+    char *chave_gerada; 
     int i = 0;
     int caractere_aleatorio;
 
-    chave_criptografica = (char*)calloc(tamanho_chave, sizeof(char));
+    chave_gerada = (char*)calloc(tamanho_chave, sizeof(char));
 
     srand((unsigned)time(NULL));
          
@@ -21,11 +21,11 @@ char* geraChaveCriptografica()
         // caractere_aleatorio = rand() % 83; 
         caractere_aleatorio = rand() % 93;
         caractere_aleatorio += 33;
-        strncat(chave_criptografica, (char*)&caractere_aleatorio, tamanho_chave);
+        strncat(chave_gerada, (char*)&caractere_aleatorio, tamanho_chave);
         i++;
     }
 
-    return chave_criptografica;
+    return chave_gerada;
 }
 
 void verificaChaveMestra(char *chave_mestra)
@@ -54,6 +54,8 @@ void verificaChaveMestra(char *chave_mestra)
             caractere_especial++;
         i++;
     }
+
+    *(chave_mestra + i) = '\0';
 
     if(caractere_especial <= 0 || caractere_numerico <= 0 || caractere_maiusculo <= 0){
         puts("Volte a verificar os requirimentos para a palavra-passe mestra");
